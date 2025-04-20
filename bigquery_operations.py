@@ -2,22 +2,15 @@ import os
 from pydantic import BaseModel
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-# from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from google.cloud import bigquery
 from dotenv import load_dotenv
 from datetime import date
+import pandas as pd
 load_dotenv()
 
 app = FastAPI()
 
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=[""],
-#     allow_credentials=True,
-#     allow_methods=[""],
-#     allow_headers=[""]
-# )
 
 
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
@@ -27,8 +20,8 @@ client = bigquery.Client()
 def get_table(dataset_name, table_name):
     dataset_ref = bigquery.DatasetReference(client.project, dataset_name)
     tabel_ref = bigquery.TableReference(dataset_ref, table_name)
-    main_table = client.get_table(tabel_ref)
-    return main_table
+    # main_table = client.get_table(tabel_ref)
+    return tabel_ref
 
 class ParentItem(BaseModel):
     parent_id: str
@@ -93,6 +86,7 @@ async def load_parent_data(item: ParentItem):
         return JSONResponse(content={"message": "Parent data loaded successfully"})
     return JSONResponse(content={"error": errors}, status_code=400)
 
+@app.post
 @app.post("/load-student")
 async def load_student_data(item: StudentItem):
     student_table = get_table('groups', 'student')
@@ -178,3 +172,30 @@ async def fetch_data(table_name:str):
 
 
     return {f"{table_name}s": data}
+
+# update data
+# @app.put()
+# async def update_data():
+#     pass
+
+# # delete data
+# @app.delete()
+# async def delete_data():
+#     pass
+# def get_existing_columns(table_ref):
+    
+    # return 
+
+def upload_data_to_bigquery(df, table_ref):
+    table = client.get_table(table_ref)
+    existing_columns = [field.name for field in table.schema]
+    df = df[[col for col in df.columns if col in existing_columns]]
+    if "date_of_birth" in df.columns:
+        df["date_of_birth"] = pd.to_datetime(df["date_of_birth"], errors="coerce")
+    # table_ref = f"{project_id}.{dataset_id}.{table_id}"
+    job_config = bigquery.LoadJobConfig(
+        autodetect=True,
+        write_disposition="WRITE_APPEND"
+    )
+    job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
+    job.result()
