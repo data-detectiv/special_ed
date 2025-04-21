@@ -11,19 +11,21 @@ st.title("📚 Special_Ed Admin Dashboard")
 
 tabs = st.tabs(["👨‍🎓 Students", "👨‍👩‍👧 Parents", "👩‍🏫 Teachers", "📊 Assessments"])
 
+
+
 # --- Students Tab ---
 with tabs[0]:
     st.subheader("Upload Student Data")
-    file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"], key="student_upload")
+    file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"], key="student_upload_file")
 
     if file:
         df = pd.read_csv(file) if file.name.endswith(".csv") else pd.read_excel(file)
         st.dataframe(df)
-        if st.button("📤 Upload to BigQuery"):
+        if st.button("📤 Upload to BigQuery", key="student_upload_btn"):
             with st.spinner("uploading"):
                 files = {"file": (file.name, file.getvalue())}
                 data = {"table": "student"}
-                response = requests.post("http://127.0.0.1:8000/upload-student", files=files, data=data)
+                response = requests.post("http://127.0.0.1:8000/upload-student/", files=files, data=data)
 
                 if response.status_code == 200:
                     result = response.json()
@@ -31,6 +33,7 @@ with tabs[0]:
                         st.success(result["message"])
                     else:
                         st.error(result.get("error", "something went wrong"))
+
                 else:
                     st.error("Upload failed")
           
@@ -55,36 +58,37 @@ with tabs[0]:
         update_mode=GridUpdateMode.MANUAL,
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=True,
+        key="student_grid"
     )
 
     updated_data = grid_response["data"]
 
 
     # Example for updating
-    if st.button("💾 Save Updates"):
+    if st.button("💾 Save Updates", key="student_save_btn"):
         # Push updated_data to BigQuery
         st.success("Updates saved.")
 
     # Delete logic (you’d track selected row and delete from BigQuery)
     st.markdown("Click checkbox in 'Delete' column and press the button below.")
-    if st.button("❌ Delete Selected"):
+    if st.button("❌ Delete Selected", key="student_delete_btn"):
         # BigQuery delete logic here
         st.warning("Selected rows deleted.")
 
 
 # --- Parents Tab ---
 with tabs[1]:
-    st.subheader("Upload Student Data")
-    file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"], key="parent_upload")
+    st.subheader("Upload Parent Data")
+    file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"], key="parent_upload_file")
 
     if file:
         df = pd.read_csv(file) if file.name.endswith(".csv") else pd.read_excel(file)
         st.dataframe(df)
-        if st.button("📤 Upload to BigQuery"):
+        if st.button("📤 Upload to BigQuery", key="parent_upload_btn"):
             with st.spinner("uploading"):
                 files = {"file": (file.name, file.getvalue())}
-                data = {"table": "student"}
-                response = requests.post("http://127.0.0.1:8000/upload-student", files=files, data=data)
+                data = {"table": "parent"}
+                response = requests.post("http://127.0.0.1:8000/upload-parent", files=files, data=data)
 
                 if response.status_code == 200:
                     result = response.json()
@@ -92,10 +96,11 @@ with tabs[1]:
                         st.success(result["message"])
                     else:
                         st.error(result.get("error", "something went wrong"))
+
                 else:
                     st.error("Upload failed")
           
-    st.subheader("📄 Current Students in Database")
+    st.subheader("📄 Current Parents in Database")
 
     # Simulate data from BigQuery for now
     data = pd.DataFrame({
@@ -116,35 +121,36 @@ with tabs[1]:
         update_mode=GridUpdateMode.MANUAL,
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=True,
+        key="parent_grid"
     )
 
     updated_data = grid_response["data"]
 
 
     # Example for updating
-    if st.button("💾 Save Updates"):
+    if st.button("💾 Save Updates", key="parent_save_btn"):
         # Push updated_data to BigQuery
         st.success("Updates saved.")
 
     # Delete logic (you’d track selected row and delete from BigQuery)
     st.markdown("Click checkbox in 'Delete' column and press the button below.")
-    if st.button("❌ Delete Selected"):
+    if st.button("❌ Delete Selected", key="parent_delete_btn"):
         # BigQuery delete logic here
         st.warning("Selected rows deleted.")
 
 # --- Teachers Tab ---
 with tabs[2]:
-    st.subheader("Upload Student Data")
-    file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"], key="teacher_upload")
+    st.subheader("Upload Teachers Data")
+    file = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"], key="teacher_upload_file")
 
     if file:
         df = pd.read_csv(file) if file.name.endswith(".csv") else pd.read_excel(file)
         st.dataframe(df)
-        if st.button("📤 Upload to BigQuery"):
+        if st.button("📤 Upload to BigQuery", key="teacher_upload_btn"):
             with st.spinner("uploading"):
                 files = {"file": (file.name, file.getvalue())}
-                data = {"table": "student"}
-                response = requests.post("http://127.0.0.1:8000/upload-student", files=files, data=data)
+                data = {"table": "teacher"}
+                response = requests.post("http://127.0.0.1:8000/upload-teacher", files=files, data=data)
 
                 if response.status_code == 200:
                     result = response.json()
@@ -152,10 +158,11 @@ with tabs[2]:
                         st.success(result["message"])
                     else:
                         st.error(result.get("error", "something went wrong"))
+
                 else:
                     st.error("Upload failed")
           
-    st.subheader("📄 Current Students in Database")
+    st.subheader("📄 Current s in Database")
 
     # Simulate data from BigQuery for now
     data = pd.DataFrame({
@@ -176,19 +183,20 @@ with tabs[2]:
         update_mode=GridUpdateMode.MANUAL,
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=True,
+        key="teacher_grid"
     )
 
     updated_data = grid_response["data"]
 
 
     # Example for updating
-    if st.button("💾 Save Updates"):
+    if st.button("💾 Save Updates", key="teacher_save_btn"):
         # Push updated_data to BigQuery
         st.success("Updates saved.")
 
     # Delete logic (you’d track selected row and delete from BigQuery)
     st.markdown("Click checkbox in 'Delete' column and press the button below.")
-    if st.button("❌ Delete Selected"):
+    if st.button("❌ Delete Selected", key="teacher_delete_btn"):
         # BigQuery delete logic here
         st.warning("Selected rows deleted.")
 
@@ -207,9 +215,9 @@ with tabs[3]:
         "Score": [None, None]
     })
 
-    edited = AgGrid(class_data, editable=True)["data"]
+    edited = AgGrid(class_data, editable=True, key="assessment_grid")["data"]
 
-    if st.button("📝 Submit Scores"):
+    if st.button("📝 Submit Scores", key="assessment_btn"):
         # Send scores to BigQuery
         st.success("Scores submitted!")
 
