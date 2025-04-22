@@ -42,6 +42,10 @@ def upload_data_to_bigquery(df, table_ref, key_column):
     if "date_of_birth" in df.columns:
         df.loc[:, "date_of_birth"] = pd.to_datetime(df["date_of_birth"], errors="coerce").dt.date
 
+    # Ensure phone number is converted to string
+    if "phone_number" in df.columns:
+        df["phone_number"] = df["phone_number"].astype(str)
+
     # Upload the new data to the temporary table
     job_config = bigquery.LoadJobConfig(
         write_disposition="WRITE_TRUNCATE",
@@ -69,6 +73,28 @@ def upload_data_to_bigquery(df, table_ref, key_column):
 
     # Optional: delete the temporary table
     client.delete_table(temp_table_id, not_found_ok=True)
+
+def fetch_data_from_bigquery(table_ref):
+    query = f"""
+        SELECT * FROM `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+"""
+    query_job = client.query(query)
+    results = query_job.result()
+    data = [dict(row.items()) for row in results]
+    return data
+
+def delete_data_from_bigquery(table_ref, key_column, key_value):
+    query = f"""
+        DELETE FROM `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+        WHERE {key_column} = @value
+"""
+    job_config = bigquery.QueryJobConfig(
+        query_parameters = [
+            bigquery.ScalarQueryParameter("value", "STRING", key_value)
+        ]
+    )
+    print(f"Student with id {key_column} deleted")
+    return client.query(query, job_config=job_config).result()
 
 
 # Student
@@ -130,3 +156,29 @@ async def upload_data(file: UploadFile = File(...)):
         return {"message": "File uploaded to BigQuery"}
     except Exception as e:
         return {"error": str(e)}
+
+# Get student data
+@app.get("/get-student")
+async def get_data():
+    table_ref = get_table("groups", "student")
+    return fetch_data_from_bigquery(table_ref)
+
+# Get parent data
+@app.get("/get-parent")
+async def get_data():
+    table_ref = get_table("groups", "parent")
+    return fetch_data_from_bigquery(table_ref)
+
+# Get teacher data
+@app.get("/get-teacher")
+async def get_data():
+    table_ref = get_table("groups", "teacher")
+    return fetch_data_from_bigquery(table_ref)
+
+
+
+# Delete parent data
+@app.delete("/delete-parent/{parent_id}")
+async def delete_parent(parent_id: str):
+    table_ref = get_table("groups", "parent")
+    return delete_data_from_bigquery(table_ref,"parent_id", parent_id)

@@ -40,12 +40,13 @@ with tabs[0]:
     st.subheader("📄 Current Students in Database")
 
     # Simulate data from BigQuery for now
-    data = pd.DataFrame({
-        "StudentID": [1, 2],
-        "Name": ["John Doe", "Jane Smith"],
-        "Class": ["Class A", "Class B"],
-        "Age": [10, 11]
-    })
+    try:
+        response = requests.get("http://127.0.0.1:8000/get-student")
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+     st.error(f"Failed to fetch data: {e}")
+
+    data = pd.DataFrame(response.json())
     gb = GridOptionsBuilder.from_dataframe(data)
     gb.configure_pagination()
     gb.configure_default_column(editable=True)
@@ -54,7 +55,7 @@ with tabs[0]:
 
     grid_response = AgGrid(
         data,
-        gridOptions=gridOptions,
+        gridOptions=gridOptions, 
         update_mode=GridUpdateMode.MANUAL,
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=True,
@@ -68,12 +69,6 @@ with tabs[0]:
     if st.button("💾 Save Updates", key="student_save_btn"):
         # Push updated_data to BigQuery
         st.success("Updates saved.")
-
-    # Delete logic (you’d track selected row and delete from BigQuery)
-    st.markdown("Click checkbox in 'Delete' column and press the button below.")
-    if st.button("❌ Delete Selected", key="student_delete_btn"):
-        # BigQuery delete logic here
-        st.warning("Selected rows deleted.")
 
 
 # --- Parents Tab ---
@@ -103,28 +98,50 @@ with tabs[1]:
     st.subheader("📄 Current Parents in Database")
 
     # Simulate data from BigQuery for now
-    data = pd.DataFrame({
-        "StudentID": [1, 2],
-        "Name": ["John Doe", "Jane Smith"],
-        "Class": ["Class A", "Class B"],
-        "Age": [10, 11]
-    })
+    try:
+        response = requests.get("http://127.0.0.1:8000/get-parent")
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to fetch data: {e}")
+    data = pd.DataFrame(response.json())
+
+    # Reset the index and build the grid options
+    data = data.reset_index(drop=True)
     gb = GridOptionsBuilder.from_dataframe(data)
+    gb.configure_selection("multiple", use_checkbox=True)
     gb.configure_pagination()
     gb.configure_default_column(editable=True)
-    gb.configure_column("Delete", headerCheckboxSelection=True)
     gridOptions = gb.build()
 
     grid_response = AgGrid(
         data,
         gridOptions=gridOptions,
-        update_mode=GridUpdateMode.MANUAL,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
         allow_unsafe_jscode=True,
         fit_columns_on_grid_load=True,
         key="parent_grid"
     )
+    st.write("Grid Response:", grid_response)
+    # selected rows
+    selected_rows = grid_response.selected_rows
+    st.write("Selected Rows:", selected_rows)
+    
 
-    updated_data = grid_response["data"]
+    # delete button
+    if st.button("Delete"):
+        st.write("Selected Rows:", selected_rows)
+        if selected_rows:
+            for row in selected_rows:
+                id = row.get("parent_id")
+                print(f"Deleting parent_id: {id}")
+                if id:
+                    requests.delete(f"http://127.0.0.1:8000/delete-parent/{id}")
+            st.success("Deleted!")
+            st.experimental_rerun()
+        else:
+            st.warning("Please select at least one student to delete.")
+   
+
 
 
     # Example for updating
@@ -132,11 +149,6 @@ with tabs[1]:
         # Push updated_data to BigQuery
         st.success("Updates saved.")
 
-    # Delete logic (you’d track selected row and delete from BigQuery)
-    st.markdown("Click checkbox in 'Delete' column and press the button below.")
-    if st.button("❌ Delete Selected", key="parent_delete_btn"):
-        # BigQuery delete logic here
-        st.warning("Selected rows deleted.")
 
 # --- Teachers Tab ---
 with tabs[2]:
@@ -162,15 +174,15 @@ with tabs[2]:
                 else:
                     st.error("Upload failed")
           
-    st.subheader("📄 Current s in Database")
+    st.subheader("📄 Current Teachers in Database")
 
     # Simulate data from BigQuery for now
-    data = pd.DataFrame({
-        "StudentID": [1, 2],
-        "Name": ["John Doe", "Jane Smith"],
-        "Class": ["Class A", "Class B"],
-        "Age": [10, 11]
-    })
+    try:
+        response = requests.get("http://127.0.0.1:8000/get-teacher")
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to fetch data: {e}")
+    data = pd.DataFrame(response.json())
     gb = GridOptionsBuilder.from_dataframe(data)
     gb.configure_pagination()
     gb.configure_default_column(editable=True)
@@ -194,11 +206,6 @@ with tabs[2]:
         # Push updated_data to BigQuery
         st.success("Updates saved.")
 
-    # Delete logic (you’d track selected row and delete from BigQuery)
-    st.markdown("Click checkbox in 'Delete' column and press the button below.")
-    if st.button("❌ Delete Selected", key="teacher_delete_btn"):
-        # BigQuery delete logic here
-        st.warning("Selected rows deleted.")
 
 # --- Assessments Tab ---
 with tabs[3]:
