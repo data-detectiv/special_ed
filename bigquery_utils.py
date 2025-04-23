@@ -182,3 +182,9 @@ async def get_data():
 async def delete_parent(parent_id: str):
     table_ref = get_table("groups", "parent")
     return delete_data_from_bigquery(table_ref,"parent_id", parent_id)
+
+# Delete student data
+@app.delete("/delete-student/{student_id}")
+async def delete_student(student_id: str):
+    table_ref = get_table("groups", "student")
+    return delete_data_from_bigquery(table_ref,"student_id", student_id)
