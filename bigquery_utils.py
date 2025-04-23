@@ -6,7 +6,7 @@ from google.cloud import bigquery
 from dotenv import load_dotenv
 from datetime import date 
 import pandas as pd
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 import pandas as pd
 from io import StringIO, BytesIO
 load_dotenv()
@@ -18,13 +18,35 @@ app = FastAPI()
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
 client = bigquery.Client()
 
+class StudentUpdate(BaseModel):
+    student_id: str
+    first_name: str
+    last_name: str
+    date_of_birth: date 
+    gender: str 
+    address: str 
+    parent_id: str 
+    teacher_id: str
+
+class ParentUpdate(BaseModel):
+    parent_id: str
+    name: str
+    phone_number: str
+    email: str 
+    address: str 
+
+class TeacherUpdate(BaseModel):
+    teacher_id: str
+    name: str
+    email: str
+    phone_number: str
+    class_id: str
+
 # referencing and getting the table
 def get_table(dataset_name, table_name):
     dataset_ref = bigquery.DatasetReference(client.project, dataset_name)
     tabel_ref = bigquery.TableReference(dataset_ref, table_name)
     return tabel_ref
-
-
 
 
 def upload_data_to_bigquery(df, table_ref, key_column):
@@ -95,6 +117,11 @@ def delete_data_from_bigquery(table_ref, key_column, key_value):
     )
     print(f"Student with id {key_column} deleted")
     return client.query(query, job_config=job_config).result()
+
+def update_data_in_bigquery():
+    query = f"""
+
+"""
 
 
 # Student
@@ -176,7 +203,6 @@ async def get_data():
     return fetch_data_from_bigquery(table_ref)
 
 
-
 # Delete parent data
 @app.delete("/delete-parent/{parent_id}")
 async def delete_parent(parent_id: str):
@@ -188,3 +214,96 @@ async def delete_parent(parent_id: str):
 async def delete_student(student_id: str):
     table_ref = get_table("groups", "student")
     return delete_data_from_bigquery(table_ref,"student_id", student_id)
+
+# Delete teacher data
+@app.delete("/delete-teacher/{teacher_id}")
+async def delete_teacher(teacher_id: str):
+    table_ref = get_table("groups", "teacher")
+    return delete_data_from_bigquery(table_ref,"teacher_id", teacher_id)
+
+# student update
+@app.put("/update-student")
+async def update_student(students: list[StudentUpdate]):
+    table_ref = get_table("groups", "student")
+    try:
+        queries = []
+        for student in students:
+            query = f"""
+                UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+                SET
+                    student_id = '{student.student_id}',
+                    first_name = '{student.first_name}',
+                    last_name = '{student.last_name}',
+                    date_of_birth = '{student.date_of_birth}',
+                    gender = '{student.gender}',
+                    address = '{student.address}',
+                    parent_id = '{student.parent_id}',
+                    teacher_id = '{student.teacher_id}'
+                WHERE
+                    student_id = '{student.student_id}'
+"""
+            queries.append(query)
+
+        query_job = client.query(";\n".join(queries))
+        query_job.result()
+        return {"message": f"Updated {len(students)} student successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        client.close()
+
+# parent update
+@app.put("/update-parent")
+async def update_parent(parents: list[ParentUpdate]):
+    table_ref = get_table("groups", "parent")
+    try:
+        queries = []
+        for parent in parents:
+            query = f"""
+                UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+                SET
+                    parent_id = '{parent.parent_id}',
+                    name = '{parent.name}',
+                    phone_number = '{parent.phone_number}',
+                    email = '{parent.email}',
+                    address = '{parent.address}'
+                WHERE
+                    parent_id = '{parent.parent_id}'
+"""
+            queries.append(query)
+
+        query_job = client.query(";\n".join(queries))
+        query_job.result()
+        return {"message": f"Updated {len(parents)} parent successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        client.close()
+
+# teacher update
+@app.put("/update-teacher")
+async def update_teacher(teachers: list[TeacherUpdate]):
+    table_ref = get_table("groups", "teacher")
+    try:
+        queries = []
+        for teacher in teachers:
+            query = f"""
+                UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+                SET
+                    teacher_id = '{teacher.teacher_id}',
+                    name = '{teacher.name}',
+                    email = '{teacher.email}',
+                    phone_number = '{teacher.phone_number}',
+                    class_id = '{teacher.class_id}'
+                WHERE
+                    teacher_id = '{teacher.teacher_id}'
+"""
+            queries.append(query)
+
+        query_job = client.query(";\n".join(queries))
+        query_job.result()
+        return {"message": f"Updated {len(teachers)} teacher successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        client.close()
