@@ -67,6 +67,9 @@ def upload_data_to_bigquery(df, table_ref, key_column):
     # Ensure phone number is converted to string
     if "phone_number" in df.columns:
         df["phone_number"] = df["phone_number"].astype(str)
+    
+    if "grade_level" in df.columns:
+        df["grade_level"] = df["grade_level"].astype(str)
 
     # Upload the new data to the temporary table
     job_config = bigquery.LoadJobConfig(
@@ -183,6 +186,46 @@ async def upload_data(file: UploadFile = File(...)):
         return {"message": "File uploaded to BigQuery"}
     except Exception as e:
         return {"error": str(e)}
+    
+# Assessment
+@app.post("/upload-assessment")
+async def upload_data(file: UploadFile = File(...)):
+    try:
+        content = await file.read()
+
+        if file.filename.endswith(".csv"):
+            df = pd.read_csv(StringIO(content.decode("utf-8")))
+        elif file.filename.endswith((".xls", ".xlsx")):
+            df = pd.read_excel(BytesIO(content))
+        else:
+            return {"error": "Unsupported file type"}
+        
+        table_ref = get_table("assessment", "assessment")
+        
+        upload_data_to_bigquery(df, table_ref, "assessment_id")
+        return {"message": "File uploaded to BigQuery"}
+    except Exception as e:
+        return {"error": str(e)}
+    
+# Class
+@app.post("/upload-class")
+async def upload_data(file: UploadFile = File(...)):
+    try:
+        content = await file.read()
+
+        if file.filename.endswith(".csv"):
+            df = pd.read_csv(StringIO(content.decode("utf-8")))
+        elif file.filename.endswith((".xls", ".xlsx")):
+            df = pd.read_excel(BytesIO(content))
+        else:
+            return {"error": "Unsupported file type"}
+        
+        table_ref = get_table("buildings", "class")
+        
+        upload_data_to_bigquery(df, table_ref, "class_id")
+        return {"message": "File uploaded to BigQuery"}
+    except Exception as e:
+        return {"error": str(e)}
 
 # Get student data
 @app.get("/get-student")
@@ -202,6 +245,17 @@ async def get_data():
     table_ref = get_table("groups", "teacher")
     return fetch_data_from_bigquery(table_ref)
 
+# Get assessment data
+@app.get("/get-assessment")
+async def get_data():
+    table_ref = get_table("assessment", "assessment")
+    return fetch_data_from_bigquery(table_ref)
+
+# Get class data
+@app.get("/get-class")
+async def get_data():
+    table_ref = get_table("buildings", "class")
+    return fetch_data_from_bigquery(table_ref)
 
 # Delete parent data
 @app.delete("/delete-parent/{parent_id}")
