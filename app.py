@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from streamlit_extras.switch_page_button import switch_page
+# from streamlit_extras.switch_page_button import switch_page
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import requests
 
@@ -15,7 +15,6 @@ class BigqueryData:
         self.file = file
 
     def upload_to_bq(self):
-          response = None
           if self.file:
             df = pd.read_csv(self.file) if file.name.endswith(".csv") else pd.read_excel(self.file)
             st.dataframe(df)
@@ -34,7 +33,7 @@ class BigqueryData:
 
                     else:
                         st.error("Upload failed")
-            return response
+       
           
     def get_table_operations(self):
        st.subheader(f"📄 Current {self.table}s in Database")
@@ -117,7 +116,6 @@ class BigqueryData:
             
                 if isinstance(selected_rows, list) and len(selected_rows) > 0:
                     selected_df = pd.DataFrame(selected_rows)
-                    # st.write("Selected Rows:", selected_df)
 
                     if st.button("Delete Selected Rows", type="primary", key=f"{self.table}_btn_delete"):
                         student_ids = selected_df[f'{self.table}_id'].tolist()
@@ -154,7 +152,7 @@ class BigqueryData:
                             
                             if success_count > 0:
                                 st.success(f"Deleted {success_count} students successfully")
-                                st.rerun()  # Refresh the data
+                                # st.rerun()  # Refresh the data
        except requests.exceptions.RequestException as e:
             st.error(f"Failed to fetch data: {e}")
             st.stop()

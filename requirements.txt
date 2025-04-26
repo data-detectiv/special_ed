@@ -1,2 +1,15 @@
 google-cloud-bigquery
 db-dtypes
+streamlit
+pandas
+streamlit_extras
+st_aggrid
+requests
+os 
+pydantic
+fastapi
+typing
+dotenv 
+datetime
+import pandas as pd
+io 
