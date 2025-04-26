@@ -42,6 +42,23 @@ class TeacherUpdate(BaseModel):
     phone_number: str
     class_id: str
 
+class AssessmentUpdate(BaseModel):
+    assessment_id: str
+    student_id: str
+    assessment_name: str
+    assessment_date: date
+    assessment_score: float
+    assessment_notes: str
+
+  
+
+class ClassUpdate(BaseModel):
+    class_id: str
+    class_name: str
+    grade_level: str
+    teacher_id: str
+
+
 # referencing and getting the table
 def get_table(dataset_name, table_name):
     dataset_ref = bigquery.DatasetReference(client.project, dataset_name)
@@ -63,7 +80,9 @@ def upload_data_to_bigquery(df, table_ref, key_column):
     # Ensure date format is correct
     if "date_of_birth" in df.columns:
         df.loc[:, "date_of_birth"] = pd.to_datetime(df["date_of_birth"], errors="coerce").dt.date
-
+    
+    if "assessment_date" in df.columns:
+        df["assessment_date"] = pd.to_datetime(df["assessment_date"], errors="coerce").dt.date
     # Ensure phone number is converted to string
     if "phone_number" in df.columns:
         df["phone_number"] = df["phone_number"].astype(str)
@@ -361,3 +380,71 @@ async def update_teacher(teachers: list[TeacherUpdate]):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         client.close()
+
+# assessment update
+@app.put("/update-assessment")
+async def update_assessment(assessments: list[AssessmentUpdate]):
+    table_ref = get_table("assessment", "assessment")
+    try:
+        queries = []
+        for assessment in assessments:
+            query = f"""
+                UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+                SET
+                    assessment_id = '{assessment.assessment_id}',
+                    student_id = '{assessment.student_id}',
+                    assessment_name = '{assessment.assessment_name}',
+                    assessment_date = '{assessment.assessment_date}',
+                    assessment_score = {assessment.assessment_score},
+                    assessment_notes = '{assessment.assessment_notes}'
+                WHERE
+                    assessment_id = '{assessment.assessment_id}'
+"""
+            queries.append(query)
+
+        query_job = client.query(";\n".join(queries))
+        query_job.result()
+        return {"message": f"Updated {len(assessments)} assessments successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        client.close()
+
+# class update
+@app.put("/update-class")
+async def update_class(classes: list[ClassUpdate]):
+    table_ref = get_table("buildings", "class")
+    try:
+        queries = []
+        for class_item in classes:
+            query = f"""
+                UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+                SET
+                    class_id = '{class_item.class_id}',
+                    class_name = '{class_item.class_name}',
+                    grade_level = '{class_item.grade_level}',
+                    teacher_id = '{class_item.teacher_id}'
+                WHERE
+                    class_id = '{class_item.class_id}'
+"""
+            queries.append(query)
+
+        query_job = client.query(";\n".join(queries))
+        query_job.result()
+        return {"message": f"Updated {len(classes)} classes successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        client.close()
+
+# Delete assessment data
+@app.delete("/delete-assessment/{assessment_id}")
+async def delete_assessment(assessment_id: str):
+    table_ref = get_table("assessment", "assessment")
+    return delete_data_from_bigquery(table_ref,"assessment_id", assessment_id)
+
+# Delete class data
+@app.delete("/delete-class/{class_id}")
+async def delete_class(class_id: str):
+    table_ref = get_table("buildings", "class")
+    return delete_data_from_bigquery(table_ref,"class_id", class_id)
