@@ -11,5 +11,4 @@ fastapi
 typing
 dotenv 
 datetime
-import pandas as pd
 io 
