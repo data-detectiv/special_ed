@@ -40,3 +40,5 @@ urllib3==2.4.0
 watchdog==6.0.0
 uvicorn
 fastapi
+dotenv
+pydantic
