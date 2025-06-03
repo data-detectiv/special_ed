@@ -42,3 +42,4 @@ uvicorn
 fastapi
 dotenv
 pydantic
+routes
