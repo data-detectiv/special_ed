@@ -1,7 +1,7 @@
 # 📊 Project Special Ed – AI-Powered Student Performance Tracker
 
-**App:** [special-ed.streamlit.app](https://special-ed.streamlit.app)  
-**Repo:** [GitHub Repo](https://github.com/asieduofeijnr/special_ed)
+**App:** [special-ed.streamlit.app](https://specialed-v1.streamlit.app/)  
+**Repo:** [GitHub Repo](https://github.com/data-detectiv/special_ed)
 
 ---
 
