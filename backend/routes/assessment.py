@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from services.bigquery_service import *
-from models.assessment import AssessmentUpdate
+from backend.services.bigquery_service import *
+from backend.models.assessment import AssessmentUpdate
 import pandas as pd
 from io import StringIO, BytesIO
 
