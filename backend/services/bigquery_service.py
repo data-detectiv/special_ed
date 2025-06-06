@@ -3,21 +3,23 @@ import os
 # from fastapi.responses import JSONResponse
 from typing import Optional
 from google.cloud import bigquery
-from google.oauth2 import service_account
-# from dotenv import load_dotenv
+# from google.oauth2 import service_account
+from dotenv import load_dotenv
 from datetime import date 
 import pandas as pd
 # from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 import pandas as pd
 # from io import StringIO, BytesIO
 # import json
-import streamlit as st
+# import streamlit as st
 
-credentials_info = st.secrets['gcp_service_account']
-credentials = service_account.Credentials.from_service_account_info(credentials_info)
-client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+# load_dotenv()
 
-# client = bigquery.Client()
+# credentials_info = st.secrets['gcp_service_account']
+# credentials = service_account.Credentials.from_service_account_info(credentials_info)
+# client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+
+client = bigquery.Client()
 
 # referencing and getting the table
 def get_table(dataset_name, table_name):
