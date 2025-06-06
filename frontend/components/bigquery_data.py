@@ -16,7 +16,7 @@ class BigqueryData:
                 with st.spinner("uploading"):
                     files = {"file": (self.file.name, self.file.getvalue())}
                     data = {"table": f"{self.table}"}
-                    response = requests.post(f"http://127.0.0.1:8000/upload-{self.table}/", files=files, data=data)
+                    response = requests.post(f"https://special-ed.onrender.com/upload-{self.table}/", files=files, data=data)
 
                     if response.status_code == 200:
                         result = response.json()
@@ -35,7 +35,7 @@ class BigqueryData:
         # Simulate data from BigQuery for now
        try:
             # Fetch data
-            response = requests.get(f"http://127.0.0.1:8000/get-{self.table}")
+            response = requests.get(f"https://special-ed.onrender.com/get-{self.table}")
             response.raise_for_status()
             data = pd.DataFrame(response.json())
 
@@ -100,7 +100,7 @@ class BigqueryData:
             # update button
                 if st.button("Update Changes", key=f"{self.table}_btn_update"):
                     try:
-                        update_response = requests.put(f"http://127.0.0.1:8000/update-{self.table}", json=updates)
+                        update_response = requests.put(f"https://special-ed.onrender.com/update-{self.table}", json=updates)
                         update_response.raise_for_status()
                         st.success("Change saved successfully!")
                         st.rerun()
@@ -117,7 +117,7 @@ class BigqueryData:
                         with st.status("Deleting rows...") as status:
                             try:
                                 for student_id in student_ids:
-                                    delete_response = requests.delete(f"http://127.0.0.1:8000/delete-{self.table}/{table_id}")
+                                    delete_response = requests.delete(f"https://special-ed.onrender.com/delete-{self.table}/{table_id}")
                                     delete_response.raise_for_status()
 
                                 status.update(label="Deletion completed!", state="complete")
@@ -137,7 +137,7 @@ class BigqueryData:
                             for table_id in table_ids:
                                 try:
                                     response = requests.delete(
-                                        f"http://127.0.0.1:8000/delete-{self.table}/{table_id}"
+                                        f"https://special-ed.onrender.com/delete-{self.table}/{table_id}"
                                     )
                                     response.raise_for_status()
                                     success_count += 1
