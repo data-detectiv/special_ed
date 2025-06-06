@@ -6,6 +6,7 @@ from io import StringIO, BytesIO
 
 router = APIRouter()
 
+
 @router.get("/get-assessment")
 async def get_data():
     table_ref = get_table("assessment", "assessment")
