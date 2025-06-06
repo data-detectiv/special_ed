@@ -42,4 +42,5 @@ uvicorn
 fastapi
 python-dotenv
 pydantic
-# routes
+google-cloud
+google-auth
