@@ -6,7 +6,7 @@ load_dotenv()
 app = FastAPI()
 
 
-from routes import student, parent, teacher, assessment, class_
+from .routes import student, parent, teacher, assessment, class_
 
 app.include_router(student.router)
 app.include_router(parent.router)
