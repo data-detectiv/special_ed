@@ -4,7 +4,7 @@ import os
 from typing import Optional
 from google.cloud import bigquery
 from google.oauth2 import service_account
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 from datetime import date 
 import pandas as pd
 # from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -13,7 +13,7 @@ import pandas as pd
 # import json
 import streamlit as st
 
-# load_dotenv()
+load_dotenv()
 
 credentials_info = st.secrets['gcp_service_account']
 credentials = service_account.Credentials.from_service_account_info(credentials_info)
