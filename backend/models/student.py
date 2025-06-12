@@ -11,3 +11,12 @@ class StudentUpdate(BaseModel):
     address: str 
     parent_id: str 
     teacher_id: str
+
+class StudentCreate(BaseModel):
+    first_name: str
+    last_name: str
+    date_of_birth: date 
+    gender: str 
+    address: str 
+    parent_id: str 
+    teacher_id: str
