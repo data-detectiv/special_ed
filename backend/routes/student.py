@@ -1,8 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from services.bigquery_service import *
-from models.student import StudentUpdate
+from models.student import StudentUpdate, StudentCreate
 import pandas as pd
 from io import StringIO, BytesIO
+from uuid import uuid4
+
 
 router = APIRouter()
 
@@ -37,8 +39,8 @@ async def update_student(students: list[StudentUpdate]):
         queries = []
         for student in students:
             query = f"""
-                UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
-                SET
+                    UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+                    SET
                     student_id = '{student.student_id}',
                     first_name = '{student.first_name}',
                     last_name = '{student.last_name}',
@@ -64,3 +66,23 @@ async def update_student(students: list[StudentUpdate]):
 async def delete_student(student_id: str):
     table_ref = get_table("groups", "student")
     return delete_data_from_bigquery(table_ref,"student_id", student_id)
+
+@router.post("/insert-student")
+async def insert_student(student: StudentCreate):
+    table_ref = get_table("groups", "student")
+    new_id = str(uuid4())
+    row_to_insert = {
+        "student_id": new_id,
+        "first_name": student.first_name,
+        "last_name": student.last_name,
+        "date_of_birth": student.date_of_birth,
+        "gender": student.gender,
+        "address": student.address,
+        "parent_id": student.parent_id,
+        "teacher_id": student.teacher_id
+    }
+
+    errors = client.insert_rows_json(f"{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}", [row_to_insert])
+    if errors:
+        raise HTTPException(status_code=400, detail=str(errors))
+    return {"message": "Inserted", "id": new_id}
