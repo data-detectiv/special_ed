@@ -139,6 +139,7 @@ venv.bak/
 
 backend/.streamlit/secrets.toml
 service-account-key.json
+
 # Spyder project settings
 .spyderproject
 .spyproject
