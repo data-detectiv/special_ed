@@ -3,15 +3,41 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import date 
 import pandas as pd
-import pandas as pd
+import os
+import json
 import streamlit as st
 
 
 credentials_info = st.secrets['gcp_service_account']
 credentials = service_account.Credentials.from_service_account_info(credentials_info)
-client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+def get_bigquery_client():
+    client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+    return client
 
-# client = bigquery.Client()
+# Try to get credentials from environment variable first, then fall back to default credentials
+# def get_bigquery_client():
+#     try:
+#         # Check if GOOGLE_APPLICATION_CREDENTIALS is set (for service account key file)
+#         if os.getenv('GOOGLE_APPLICATION_CREDENTIALS'):
+#             return bigquery.Client()
+        
+#         # Check if GCP_SERVICE_ACCOUNT_JSON is set (for JSON credentials in env var)
+#         elif os.getenv('GCP_SERVICE_ACCOUNT_JSON'):
+#             credentials_info = json.loads(os.getenv('GCP_SERVICE_ACCOUNT_JSON'))
+#             credentials = service_account.Credentials.from_service_account_info(credentials_info)
+#             return bigquery.Client(credentials=credentials, project=credentials.project_id)
+        
+#         # Fall back to default credentials (for local development or when using gcloud auth)
+#         else:
+#             return bigquery.Client()
+            
+#     except Exception as e:
+#         print(f"Error initializing BigQuery client: {e}")
+#         # Fall back to default credentials
+#         return bigquery.Client()
+
+# # Initialize the client
+client = get_bigquery_client()
 
 # referencing and getting the table
 def get_table(dataset_name, table_name):

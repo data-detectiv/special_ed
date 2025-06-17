@@ -13,6 +13,7 @@ class StudentUpdate(BaseModel):
     teacher_id: str
 
 class StudentCreate(BaseModel):
+    student_id: str
     first_name: str
     last_name: str
     date_of_birth: date 

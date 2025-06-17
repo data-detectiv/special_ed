@@ -31,29 +31,75 @@ async def upload_data(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": str(e)}
 
-router.put("/update-teacher")
+@router.put("/update-teacher")
 async def update_teacher(teachers: list[TeacherUpdate]):
     table_ref = get_table("groups", "teacher")
     try:
-        queries = []
+        # Debug logging
+        print(f"Received {len(teachers)} teachers to update:")
+        for i, teacher in enumerate(teachers):
+            print(f"Teacher {i+1}: {teacher}")
+        
+        # Use temporary table approach to avoid streaming buffer issues
+        temp_table_id = f"{table_ref.project}.{table_ref.dataset_id}.temp_update_{table_ref.table_id}"
+        
+        # Create temporary table with updated data
+        temp_data = []
         for teacher in teachers:
-            query = f"""
-                UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
-                SET
-                    teacher_id = '{teacher.teacher_id}',
-                    name = '{teacher.name}',
-                    email = '{teacher.email}',
-                    phone_number = '{teacher.phone_number}',
-                    class_id = '{teacher.class_id}'
-                WHERE
-                    teacher_id = '{teacher.teacher_id}'
-"""
-            queries.append(query)
+            temp_data.append({
+                "teacher_id": teacher.teacher_id,
+                "first_name": teacher.first_name,
+                "last_name": teacher.last_name,
+                "email": teacher.email,
+                "phone": teacher.phone,
+                "subject": teacher.subject,
+                "address": teacher.address
+            })
+        
+        # Upload to temporary table
+        from google.cloud import bigquery
+        job_config = bigquery.LoadJobConfig(
+            write_disposition="WRITE_TRUNCATE",
+            autodetect=True
+        )
+        
+        temp_df = pd.DataFrame(temp_data)
+        client.load_table_from_dataframe(temp_df, temp_table_id, job_config=job_config).result()
+        print(f"Temporary table created: {temp_table_id}")
+        
+        # Use MERGE from temp table to main table
+        for teacher in teachers:
+            merge_query = f"""
+                MERGE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}` T
+                USING `{temp_table_id}` S
+                ON T.teacher_id = S.teacher_id
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        first_name = S.first_name,
+                        last_name = S.last_name,
+                        email = S.email,
+                        phone = S.phone,
+                        subject = S.subject,
+                        address = S.address
+            """
+            print(f"Executing MERGE query for teacher {teacher.teacher_id}")
+            query_job = client.query(merge_query)
+            query_job.result()
+            print(f"MERGE completed for teacher {teacher.teacher_id}")
 
-        query_job = client.query(";\n".join(queries))
-        query_job.result()
+        # Clean up temporary table
+        client.delete_table(temp_table_id, not_found_ok=True)
+        print("Temporary table deleted")
+
+        print("All update operations completed successfully")
         return {"message": f"Updated {len(teachers)} teacher successfully"}
     except Exception as e:
+        print(f"Error in update_teacher: {e}")
+        # Clean up temporary table on error
+        try:
+            client.delete_table(temp_table_id, not_found_ok=True)
+        except:
+            pass
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         client.close()

@@ -34,25 +34,69 @@ async def upload_data(file: UploadFile = File(...)):
 async def update_parent(parents: list[ParentUpdate]):
     table_ref = get_table("groups", "parent")
     try:
-        queries = []
+        # Debug logging
+        print(f"Received {len(parents)} parents to update:")
+        for i, parent in enumerate(parents):
+            print(f"Parent {i+1}: {parent}")
+        
+        # Use temporary table approach to avoid streaming buffer issues
+        temp_table_id = f"{table_ref.project}.{table_ref.dataset_id}.temp_update_{table_ref.table_id}"
+        
+        # Create temporary table with updated data
+        temp_data = []
         for parent in parents:
-            query = f"""
-                UPDATE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
-                SET
-                    parent_id = '{parent.parent_id}',
-                    name = '{parent.name}',
-                    phone_number = '{parent.phone_number}',
-                    email = '{parent.email}',
-                    address = '{parent.address}'
-                WHERE
-                    parent_id = '{parent.parent_id}'
-"""
-            queries.append(query)
+            temp_data.append({
+                "parent_id": parent.parent_id,
+                "first_name": parent.first_name,
+                "last_name": parent.last_name,
+                "email": parent.email,
+                "phone": parent.phone,
+                "address": parent.address
+            })
+        
+        # Upload to temporary table
+        from google.cloud import bigquery
+        job_config = bigquery.LoadJobConfig(
+            write_disposition="WRITE_TRUNCATE",
+            autodetect=True
+        )
+        
+        temp_df = pd.DataFrame(temp_data)
+        client.load_table_from_dataframe(temp_df, temp_table_id, job_config=job_config).result()
+        print(f"Temporary table created: {temp_table_id}")
+        
+        # Use MERGE from temp table to main table
+        for parent in parents:
+            merge_query = f"""
+                MERGE `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}` T
+                USING `{temp_table_id}` S
+                ON T.parent_id = S.parent_id
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        first_name = S.first_name,
+                        last_name = S.last_name,
+                        email = S.email,
+                        phone = S.phone,
+                        address = S.address
+            """
+            print(f"Executing MERGE query for parent {parent.parent_id}")
+            query_job = client.query(merge_query)
+            query_job.result()
+            print(f"MERGE completed for parent {parent.parent_id}")
 
-        query_job = client.query(";\n".join(queries))
-        query_job.result()
+        # Clean up temporary table
+        client.delete_table(temp_table_id, not_found_ok=True)
+        print("Temporary table deleted")
+
+        print("All update operations completed successfully")
         return {"message": f"Updated {len(parents)} parent successfully"}
     except Exception as e:
+        print(f"Error in update_parent: {e}")
+        # Clean up temporary table on error
+        try:
+            client.delete_table(temp_table_id, not_found_ok=True)
+        except:
+            pass
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         client.close()
