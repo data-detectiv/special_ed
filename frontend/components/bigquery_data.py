@@ -60,9 +60,9 @@ class BigqueryData:
             except requests.exceptions.RequestException as e:
                 st.error(f"Failed to fetch data: {e}")
                 st.stop()
-        
-        # Add new row functionality
-        col1, col2 = st.columns([1, 4])
+
+        # --- Add new row and search bar in the same row ---
+        col1, col_spacer, col_search = st.columns([1, 6, 2])
         with col1:
             if st.button("➕ Add New Row", key=f"{self.table}_add_btn"):
                 # Create a new empty row
@@ -76,6 +76,34 @@ class BigqueryData:
                 new_df = pd.concat([data, pd.DataFrame([new_row])], ignore_index=True)
                 st.session_state[f'{self.table}_data'] = new_df
                 st.rerun()
+        with col_search:
+            search_query = st.text_input(
+                label=f"Search {self.table}s...",
+                value=st.session_state.get(f"{self.table}_search", ""),
+                key=f"{self.table}_search",
+                placeholder=f"Search {self.table}s...",
+                label_visibility="collapsed",
+            )
+            # --- Custom CSS for small search bar ---
+            st.markdown(
+                """
+                <style>
+                div[data-testid="stTextInput"] input {
+                    height: 2.2em;
+                    font-size: 0.9em;
+                    padding: 0.2em 0.5em;
+                    border-radius: 10px;
+                    width: 100%;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+
+        # --- Apply search filter if query is entered ---
+        if search_query.strip() != "" and not data.empty:
+            mask = data.apply(lambda row: row.astype(str).str.contains(search_query, case=False, na=False).any(), axis=1)
+            data = data[mask]
         
         # Configure grid
         gb = GridOptionsBuilder.from_dataframe(data)
