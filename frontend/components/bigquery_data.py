@@ -293,3 +293,5 @@ class BigqueryData:
                 st.error(f"An error occurred during deletion: {e}")
                 st.write(f"Debug - selected_rows type: {type(selected_rows)}")
                 st.write(f"Debug - selected_rows content: {selected_rows}")
+
+                # implement advanced search later
