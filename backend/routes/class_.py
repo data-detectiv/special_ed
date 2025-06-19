@@ -4,10 +4,37 @@ import pandas as pd
 from google.cloud import bigquery
 from services.bigquery_service import get_table, get_bigquery_client
 from models.class_ import ClassCreate, ClassUpdate
+import re
 
 router = APIRouter()
 
-
+def get_next_class_id():
+    """Generate the next sequential class ID (C001, C002, etc.)"""
+    table_ref = get_table("groups", "class")
+    client = get_bigquery_client()
+    try:
+        query = f"""
+            SELECT class_id FROM `{table_ref.project}.{table_ref.dataset_id}.{table_ref.table_id}`
+            WHERE class_id LIKE 'C%'
+            ORDER BY class_id DESC
+            LIMIT 1
+        """
+        query_job = client.query(query)
+        results = query_job.result()
+        if results.total_rows == 0:
+            return "C001"
+        latest_id = list(results)[0]['class_id']
+        match = re.match(r'C(\d+)', latest_id)
+        if match:
+            next_num = int(match.group(1)) + 1
+            return f"C{next_num:03d}"
+        else:
+            return "C001"
+    except Exception as e:
+        print(f"Error generating next class ID: {e}")
+        return "C001"
+    finally:
+        client.close()
 
 @router.post("/create-class")
 async def create_class(classes: List[ClassCreate]):
@@ -135,6 +162,46 @@ async def delete_class(class_id: str):
         query_job.result()
         return {"message": f"Deleted class {class_id} successfully"}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        client.close()
+
+@router.post("/add-class")
+async def add_classes(classes: list[dict]):
+    """
+    Add multiple new classes from the grid interface.
+    Expects a list of dictionaries with class data (without class_id).
+    """
+    table_ref = get_table("groups", "class")
+    client = get_bigquery_client()
+    try:
+        print(f"Received {len(classes)} classes to add:")
+        rows_to_insert = []
+        for class_data in classes:
+            new_id = get_next_class_id()
+            print(f"Generated ID: {new_id} for class: {class_data.get('class_name', 'Unknown')}")
+            row_to_insert = {
+                "class_id": new_id,
+                "class_name": class_data.get("class_name", ""),
+                "grade_level": class_data.get("grade_level", ""),
+                "teacher_id": class_data.get("teacher_id", ""),
+                "room_number": class_data.get("room_number", ""),
+                "schedule": class_data.get("schedule", "")
+            }
+            rows_to_insert.append(row_to_insert)
+            print(f"Row to insert: {row_to_insert}")
+        print(f"Inserting {len(rows_to_insert)} rows into BigQuery...")
+        job_config = bigquery.LoadJobConfig(
+            write_disposition="WRITE_APPEND",
+            autodetect=True
+        )
+        df = pd.DataFrame(rows_to_insert)
+        job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
+        job.result()
+        print(f"Successfully added {len(classes)} classes")
+        return {"message": f"Added {len(classes)} class(es) successfully"}
+    except Exception as e:
+        print(f"Error in add_classes: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         client.close() 
